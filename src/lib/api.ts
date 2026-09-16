@@ -85,6 +85,45 @@ export async function filterByCategory(category: string): Promise<ParsedRecipe[]
   return data.meals.map(parseRecipe);
 }
 
+export async function filterByIngredient(ingredient: string): Promise<ParsedRecipe[]> {
+  if (!ingredient.trim()) return [];
+  const data = await fetchFromApi<{ meals: RawRecipe[] | null }>(
+    `/filter.php?i=${encodeURIComponent(ingredient.trim())}`
+  );
+  if (!data?.meals) return [];
+  return data.meals.map(parseRecipe);
+}
+
+export async function filterCombined(params: {
+  category?: string;
+  area?: string;
+  ingredient?: string;
+}): Promise<ParsedRecipe[]> {
+  const searchParams = new URLSearchParams();
+  if (params.category && params.category !== "Semua") searchParams.set("c", params.category);
+  if (params.area) searchParams.set("a", params.area);
+  if (params.ingredient) searchParams.set("i", params.ingredient);
+
+  const queryStr = searchParams.toString();
+  if (!queryStr) return getLatestRecipes();
+
+  const data = await fetchFromApi<{ meals: RawRecipe[] | null }>(
+    `/filter.php?${queryStr}`
+  );
+  if (!data?.meals) return [];
+  return data.meals.map(parseRecipe);
+}
+
+export async function getIngredientsList(): Promise<string[]> {
+  const data = await fetchFromApi<{ meals?: Array<{ strBahan: string }> }>(
+    "/list.php?i=list"
+  );
+  if (!data?.meals) return [];
+  return data.meals
+    .map((m) => m.strBahan?.trim())
+    .filter((b): b is string => Boolean(b && b.length > 0));
+}
+
 export async function getApiStats(): Promise<ApiStats | null> {
   return await fetchFromApi<ApiStats>("/stats");
 }

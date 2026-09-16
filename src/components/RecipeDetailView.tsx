@@ -19,10 +19,12 @@ import {
   Timer as TimerIcon,
   Check,
   RotateCcw,
+  Heart,
 } from "lucide-react";
 import { ParsedRecipe } from "@/types/recipe";
 import { scaleMeasure, FALLBACK_IMAGE } from "@/lib/recipe-utils";
 import { useFavorites } from "@/lib/favorites";
+import { getCategoryMeta } from "@/lib/category-meta";
 import CookingTimer from "./CookingTimer";
 import Footer from "./Footer";
 
@@ -146,12 +148,18 @@ export default function RecipeDetailView({ recipe }: RecipeDetailViewProps) {
 
             <div className="absolute bottom-6 left-6 right-6 text-white">
               <div className="flex flex-wrap items-center gap-2 mb-3">
-                <span className="px-3 py-1 text-xs font-bold rounded-lg bg-emerald-600 text-white uppercase tracking-wider shadow-sm">
-                  {recipe.category || "Umum"}
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-bold rounded-lg bg-emerald-600 text-white uppercase tracking-wider shadow-sm">
+                  <span>{getCategoryMeta(recipe.category).icon}</span>
+                  <span>{recipe.category || "Umum"}</span>
                 </span>
                 {recipe.region && (
                   <span className="px-3 py-1 text-xs font-medium rounded-lg bg-black/40 backdrop-blur-md text-white border border-white/20">
                     📍 {recipe.region}
+                  </span>
+                )}
+                {recipe.saved > 0 && (
+                  <span className="px-2.5 py-1 text-xs font-medium rounded-lg bg-rose-600/80 backdrop-blur-md text-white flex items-center gap-1">
+                    <Heart className="w-3.5 h-3.5 fill-current" /> {recipe.saved} disimpan
                   </span>
                 )}
               </div>

@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { Bookmark, Users, UtensilsCrossed, ArrowRight } from "lucide-react";
+import { Bookmark, Users, UtensilsCrossed, ArrowRight, Heart } from "lucide-react";
 import { ParsedRecipe } from "@/types/recipe";
 import { FALLBACK_IMAGE } from "@/lib/recipe-utils";
 import { useFavorites } from "@/lib/favorites";
+import { getCategoryMeta } from "@/lib/category-meta";
 
 interface RecipeCardProps {
   recipe: ParsedRecipe;
@@ -22,6 +23,7 @@ export default function RecipeCard({ recipe, onSelect }: RecipeCardProps) {
     toggle(recipe);
   };
 
+  const meta = getCategoryMeta(recipe.category);
   const ingredientsCount = recipe.ingredients.length;
   const stepsCount = recipe.instructions.length;
 
@@ -47,8 +49,9 @@ export default function RecipeCard({ recipe, onSelect }: RecipeCardProps) {
 
         {/* Top Badges */}
         <div className="absolute top-3 left-3 right-3 flex items-center justify-between">
-          <span className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-white/90 dark:bg-emerald-950/90 text-emerald-900 dark:text-emerald-200 backdrop-blur-md shadow-xs border border-white/20">
-            {recipe.category || "Umum"}
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-lg bg-white/95 dark:bg-emerald-950/95 text-emerald-900 dark:text-emerald-200 backdrop-blur-md shadow-xs border border-white/20">
+            <span>{meta.icon}</span>
+            <span>{recipe.category || "Umum"}</span>
           </span>
 
           {/* Bookmark Button */}
@@ -84,9 +87,13 @@ export default function RecipeCard({ recipe, onSelect }: RecipeCardProps) {
             {recipe.title}
           </h3>
 
-          {recipe.description && (
+          {recipe.description ? (
             <p className="mt-1 text-xs text-gray-700 dark:text-gray-200 line-clamp-2 leading-relaxed">
               {recipe.description}
+            </p>
+          ) : (
+            <p className="mt-1 text-xs text-gray-700 dark:text-gray-300 italic">
+              Koleksi resep khas Indonesia teruji dari Cookpad.
             </p>
           )}
         </div>
@@ -102,27 +109,36 @@ export default function RecipeCard({ recipe, onSelect }: RecipeCardProps) {
                 </span>
               )}
 
-              {ingredientsCount > 0 && (
+              {ingredientsCount > 0 ? (
                 <span className="flex items-center gap-1" title="Jumlah bahan">
                   <UtensilsCrossed className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                   <span>{ingredientsCount} bahan</span>
                 </span>
+              ) : (
+                <span className="text-[11px] text-emerald-700 dark:text-emerald-400 font-medium">
+                  Bahan & Takaran Lengkap
+                </span>
               )}
             </div>
 
-            {/* Author Credit */}
-            {recipe.author.name && (
+            {/* Author Credit or Saved count */}
+            {recipe.saved > 0 ? (
+              <span className="flex items-center gap-1 text-[11px] text-amber-700 dark:text-amber-400 font-medium">
+                <Heart className="w-3 h-3 fill-current text-rose-500" />
+                <span>{recipe.saved}</span>
+              </span>
+            ) : recipe.author.name ? (
               <span className="truncate max-w-[110px] text-[11px] text-gray-700 dark:text-gray-300">
                 Oleh {recipe.author.name}
               </span>
-            )}
+            ) : null}
           </div>
 
           {/* Bottom Action Trigger */}
           <div className="mt-3 flex items-center justify-between text-xs font-semibold text-emerald-600 dark:text-emerald-400 group-hover:text-emerald-700 dark:group-hover:text-emerald-300">
-            <span>{stepsCount > 0 ? `${stepsCount} Langkah Masak` : "Lihat Detail"}</span>
+            <span>{stepsCount > 0 ? `${stepsCount} Langkah Masak` : "Buka Panduan"}</span>
             <span className="flex items-center gap-1 text-xs group-hover:translate-x-1 transition-transform">
-              Buka Resep <ArrowRight className="w-3.5 h-3.5" />
+              Lihat Resep <ArrowRight className="w-3.5 h-3.5" />
             </span>
           </div>
         </div>

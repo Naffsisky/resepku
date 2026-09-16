@@ -1,14 +1,15 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
-import { Search, RefreshCw, AlertCircle } from "lucide-react";
+import { useState, useCallback, useMemo, useRef } from "react";
+import { Search, RefreshCw, AlertCircle, ArrowUpDown, ChevronDown, Sparkles } from "lucide-react";
 import { ParsedRecipe, ApiStats } from "@/types/recipe";
 import {
   searchRecipes,
   filterByCategory,
+  filterByIngredient,
   getLatestRecipes,
-  getRecipeById,
 } from "@/lib/api";
+import { getCategoryMeta } from "@/lib/category-meta";
 import Navbar from "@/components/Navbar";
 import HeroBanner from "@/components/HeroBanner";
 import CategoryFilter from "@/components/CategoryFilter";
@@ -26,6 +27,10 @@ interface HomeClientProps {
   initialStats: ApiStats | null;
 }
 
+type SortOption = "default" | "az" | "za" | "servings-desc" | "ingredients-asc";
+
+const PAGE_SIZE = 12;
+
 export default function HomeClient({
   initialRecipes,
   initialCategories,
@@ -36,6 +41,9 @@ export default function HomeClient({
   const [stats] = useState<ApiStats | null>(initialStats);
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState<string>("");
+  const [searchMode, setSearchMode] = useState<"recipe" | "ingredient">("recipe");
+  const [sortBy, setSortBy] = useState<SortOption>("default");
+  const [visibleCount, setVisibleCount] = useState<number>(PAGE_SIZE);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -47,10 +55,12 @@ export default function HomeClient({
   const recipesSectionRef = useRef<HTMLDivElement>(null);
 
   // Load recipes for search
-  const handleSearch = useCallback(async (query: string) => {
+  const handleSearch = useCallback(async (query: string, mode: "recipe" | "ingredient" = "recipe") => {
     setSearchQuery(query);
+    setSearchMode(mode);
     setSelectedCategory("");
     setError(null);
+    setVisibleCount(PAGE_SIZE);
 
     if (!query.trim()) {
       setIsLoading(true);
@@ -67,7 +77,12 @@ export default function HomeClient({
 
     setIsLoading(true);
     try {
-      const results = await searchRecipes(query.trim());
+      let results: ParsedRecipe[];
+      if (mode === "ingredient") {
+        results = await filterByIngredient(query.trim());
+      } else {
+        results = await searchRecipes(query.trim());
+      }
       setRecipes(results);
     } catch {
       setError("Terjadi kesalahan saat mencari resep.");
@@ -81,6 +96,7 @@ export default function HomeClient({
     setSelectedCategory(cat);
     setSearchQuery("");
     setError(null);
+    setVisibleCount(PAGE_SIZE);
     setIsLoading(true);
 
     try {
@@ -103,6 +119,7 @@ export default function HomeClient({
     setSearchQuery("");
     setSelectedCategory("");
     setError(null);
+    setVisibleCount(PAGE_SIZE);
     setIsLoading(true);
     try {
       const data = await getLatestRecipes();
@@ -112,27 +129,36 @@ export default function HomeClient({
     }
   };
 
-  // Open recipe: if it lacks instructions, fetch full details via lookup.php
-  const handleOpenRecipe = async (recipe: ParsedRecipe) => {
-    if (recipe.instructions.length === 0 || recipe.ingredients.length === 0) {
-      // Need full lookup
-      setSelectedRecipe(recipe); // open immediately with preview
-      try {
-        const full = await getRecipeById(recipe.id);
-        if (full) {
-          setSelectedRecipe(full);
-        }
-      } catch {
-        // keep preview
-      }
-    } else {
-      setSelectedRecipe(recipe);
-    }
+  const handleOpenRecipe = (recipe: ParsedRecipe) => {
+    setSelectedRecipe(recipe);
   };
 
   const scrollToRecipes = () => {
     recipesSectionRef.current?.scrollIntoView({ behavior: "smooth" });
   };
+
+  // Sorting logic
+  const sortedRecipes = useMemo(() => {
+    const list = [...recipes];
+    switch (sortBy) {
+      case "az":
+        return list.sort((a, b) => a.title.localeCompare(b.title, "id"));
+      case "za":
+        return list.sort((a, b) => b.title.localeCompare(a.title, "id"));
+      case "servings-desc":
+        return list.sort((a, b) => b.servings - a.servings);
+      case "ingredients-asc":
+        return list.sort((a, b) => a.ingredients.length - b.ingredients.length);
+      default:
+        return list;
+    }
+  }, [recipes, sortBy]);
+
+  const displayedRecipes = useMemo(() => {
+    return sortedRecipes.slice(0, visibleCount);
+  }, [sortedRecipes, visibleCount]);
+
+  const activeCategoryMeta = selectedCategory ? getCategoryMeta(selectedCategory) : null;
 
   return (
     <div className="min-h-screen flex flex-col bg-[#f8faf9] dark:bg-[#0d1512] text-gray-900 dark:text-gray-100 selection:bg-emerald-500/20 selection:text-emerald-700">
@@ -146,8 +172,8 @@ export default function HomeClient({
       <HeroBanner
         onSearch={handleSearch}
         stats={stats}
-        onSelectKeyword={(kw) => {
-          handleSearch(kw);
+        onSelectKeyword={(kw, mode) => {
+          handleSearch(kw, mode);
           scrollToRecipes();
         }}
         onSurpriseMe={() => setIsRandomOpen(true)}
@@ -166,33 +192,71 @@ export default function HomeClient({
 
       {/* Main Recipe Section */}
       <main ref={recipesSectionRef} className="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full">
-        {/* Section Title & Status Indicator */}
-        <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+        {/* Section Title & Controls */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 pb-4 border-b border-gray-200/60 dark:border-emerald-900/40">
           <div>
-            <h2 className="text-xl sm:text-2xl font-extrabold text-emerald-950 dark:text-emerald-50 tracking-tight">
-              {searchQuery
-                ? `Hasil Pencarian: "${searchQuery}"`
-                : selectedCategory
-                ? `Kategori: ${selectedCategory}`
-                : "Resep Pilihan & Terbaru"}
-            </h2>
-            <p className="text-xs sm:text-sm text-gray-700 dark:text-gray-200 mt-0.5">
-              {isLoading
-                ? "Memuat resep lezat..."
-                : `${recipes.length} resep masakan ditemukan`}
+            <div className="flex items-center gap-2">
+              {activeCategoryMeta && (
+                <span className="text-xl sm:text-2xl">{activeCategoryMeta.icon}</span>
+              )}
+              <h2 className="text-xl sm:text-2xl font-extrabold text-emerald-950 dark:text-emerald-50 tracking-tight">
+                {searchQuery
+                  ? `Hasil ${searchMode === "ingredient" ? "Bahan" : "Pencarian"}: "${searchQuery}"`
+                  : selectedCategory
+                  ? `Kategori: ${selectedCategory}`
+                  : "Resep Pilihan & Terbaru"}
+              </h2>
+            </div>
+
+            <p className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 mt-1">
+              {isLoading ? (
+                "Memuat resep lezat..."
+              ) : (
+                <>
+                  Ditemukan <strong className="text-emerald-700 dark:text-emerald-400 font-bold">{recipes.length}</strong> resep masakan
+                  {recipes.length > visibleCount && ` (menampilkan ${displayedRecipes.length})`}
+                </>
+              )}
             </p>
           </div>
 
-          {(searchQuery || selectedCategory) && (
-            <button
-              type="button"
-              onClick={handleReset}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 border border-emerald-200/80 dark:border-emerald-800/80 transition-all active:scale-95"
-            >
-              <RefreshCw className="w-3.5 h-3.5" />
-              <span>Tampilkan Semua</span>
-            </button>
-          )}
+          {/* Action Toolbar: Sorting and Reset */}
+          <div className="flex flex-wrap items-center gap-2.5">
+            {/* Sort Dropdown */}
+            <div className="relative inline-flex items-center">
+              <label htmlFor="sort-select" className="sr-only">
+                Urutkan Berdasarkan
+              </label>
+              <div className="flex items-center gap-1.5 px-3 py-2 bg-white dark:bg-emerald-950/60 rounded-xl border border-gray-200 dark:border-emerald-800/80 text-xs font-semibold text-gray-700 dark:text-gray-200 shadow-2xs">
+                <ArrowUpDown className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                <span>Urutkan:</span>
+                <select
+                  id="sort-select"
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as SortOption)}
+                  className="bg-transparent focus:outline-none cursor-pointer pr-4 font-semibold text-emerald-900 dark:text-emerald-200"
+                >
+                  <option value="default" className="dark:bg-emerald-950">Paling Sesuai</option>
+                  <option value="az" className="dark:bg-emerald-950">Nama (A - Z)</option>
+                  <option value="za" className="dark:bg-emerald-950">Nama (Z - A)</option>
+                  <option value="servings-desc" className="dark:bg-emerald-950">Porsi Terbanyak</option>
+                  <option value="ingredients-asc" className="dark:bg-emerald-950">Bahan Paling Sedikit</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Reset Button */}
+            {(searchQuery || selectedCategory) && (
+              <button
+                type="button"
+                onClick={handleReset}
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 border border-emerald-200/80 dark:border-emerald-800/80 transition-all active:scale-95 shadow-2xs"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                <span>Semua Resep</span>
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Error Banner */}
@@ -228,26 +292,52 @@ export default function HomeClient({
               Tidak Ada Resep yang Cocok
             </h3>
             <p className="mt-1 text-xs sm:text-sm text-gray-700 dark:text-gray-200 leading-relaxed">
-              Kami tidak menemukan resep untuk pencarian atau filter ini. Coba gunakan kata kunci yang lebih umum seperti &ldquo;ayam&rdquo;, &ldquo;telur&rdquo;, atau &ldquo;kecap&rdquo;.
+              Kami tidak menemukan resep untuk &ldquo;{searchQuery || selectedCategory}&rdquo;. Coba gunakan kata kunci bahan seperti &ldquo;ayam&rdquo;, &ldquo;telur&rdquo;, atau &ldquo;santan&rdquo;.
             </p>
-            <button
-              type="button"
-              onClick={handleReset}
-              className="mt-5 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-md active:scale-95 transition-all"
-            >
-              Kembali ke Semua Resep
-            </button>
+            <div className="mt-5 flex items-center justify-center gap-3">
+              <button
+                type="button"
+                onClick={handleReset}
+                className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-md active:scale-95 transition-all"
+              >
+                Kembali ke Semua Resep
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsRandomOpen(true)}
+                className="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold shadow-md active:scale-95 transition-all flex items-center gap-1.5"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Pilihkan Acak</span>
+              </button>
+            </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-7">
-            {recipes.map((recipe) => (
-              <RecipeCard
-                key={recipe.id}
-                recipe={recipe}
-                onSelect={handleOpenRecipe}
-              />
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-7">
+              {displayedRecipes.map((recipe) => (
+                <RecipeCard
+                  key={recipe.id}
+                  recipe={recipe}
+                  onSelect={handleOpenRecipe}
+                />
+              ))}
+            </div>
+
+            {/* Load More Button if results exceed initial page */}
+            {recipes.length > visibleCount && (
+              <div className="mt-10 text-center">
+                <button
+                  type="button"
+                  onClick={() => setVisibleCount((prev) => prev + PAGE_SIZE)}
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-white dark:bg-emerald-950/60 hover:bg-emerald-50 dark:hover:bg-emerald-900/60 text-emerald-800 dark:text-emerald-200 font-semibold text-xs sm:text-sm border border-emerald-300/80 dark:border-emerald-800 shadow-sm active:scale-95 transition-all"
+                >
+                  <span>Tampilkan Lebih Banyak ({recipes.length - visibleCount} resep lagi)</span>
+                  <ChevronDown className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+          </>
         )}
       </main>
 

@@ -185,8 +185,8 @@ export default function CategoryFilter({
                       <div className="font-semibold text-xs sm:text-sm truncate">
                         {cat}
                       </div>
-                      <div className={`text-[10px] truncate ${isSelected ? "text-emerald-100" : "text-gray-700 dark:text-gray-300"}`}>
-                        Kategori Kuliner
+                      <div className={`text-[10px] line-clamp-1 ${isSelected ? "text-emerald-100" : "text-gray-700 dark:text-gray-300"}`} title={meta.description}>
+                        {meta.description}
                       </div>
                     </div>
                   </button>

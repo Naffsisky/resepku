@@ -10,7 +10,7 @@ function getBaseUrl(): string {
   return "/api/backend";
 }
 
-async function fetchFromApi<T>(path: string): Promise<T | null> {
+async function fetchFromApi<T>(path: string, noCache = false): Promise<T | null> {
   try {
     const baseUrl = getBaseUrl();
     const url = `${baseUrl}${path}`;
@@ -18,7 +18,7 @@ async function fetchFromApi<T>(path: string): Promise<T | null> {
       headers: {
         Accept: "application/json",
       },
-      next: { revalidate: 60 },
+      ...(noCache ? { cache: "no-store" } : { next: { revalidate: 60 } }),
     });
 
     if (!res.ok) {
@@ -58,14 +58,18 @@ export async function getRecipeById(id: string): Promise<ParsedRecipe | null> {
 }
 
 export async function getRandomRecipe(): Promise<ParsedRecipe | null> {
-  const data = await fetchFromApi<{ meals: RawRecipe[] | null }>("/random.php");
+  const timestamp = Date.now();
+  const data = await fetchFromApi<{ meals: RawRecipe[] | null }>(
+    `/random.php?_t=${timestamp}`,
+    true // always fresh, never cache
+  );
   if (!data?.meals || data.meals.length === 0) return null;
   return parseRecipe(data.meals[0]);
 }
 
 export async function getCategories(): Promise<string[]> {
   const data = await fetchFromApi<{
-    categories?: Array<{ strKategori: string }>;
+    categories?: Array<{ strKategori: string; strDeskripsiKategori?: string }>;
   }>("/categories.php");
 
   if (!data?.categories) return [];

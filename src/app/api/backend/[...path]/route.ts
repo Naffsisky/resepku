@@ -12,12 +12,19 @@ export async function GET(
     const search = request.nextUrl.search; // preserves ?s=... &c=... etc.
     const url = `${UPSTREAM_API}/${subpath}${search}`;
 
+    const isRandomEndpoint =
+      subpath === "random.php" ||
+      subpath === "resep/random" ||
+      subpath.includes("random");
+
     const upstreamResponse = await fetch(url, {
       headers: {
         Accept: "application/json",
       },
-      // Cache with Next.js revalidation for 60 seconds to stay well below the 100 req/min limit
-      next: { revalidate: 60 },
+      // Never cache random recipe requests to guarantee unique results on every call
+      ...(isRandomEndpoint
+        ? { cache: "no-store" }
+        : { next: { revalidate: 60 } }),
     });
 
     if (!upstreamResponse.ok) {
@@ -31,9 +38,13 @@ export async function GET(
 
     return NextResponse.json(data, {
       status: 200,
-      headers: {
-        "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120",
-      },
+      headers: isRandomEndpoint
+        ? {
+            "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0",
+          }
+        : {
+            "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120",
+          },
     });
   } catch (err: unknown) {
     const errorMessage = err instanceof Error ? err.message : "Internal server error";

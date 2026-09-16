@@ -130,7 +130,7 @@ export default function FavoritesDrawer({
 
         {/* Footer */}
         {favorites.length > 0 && (
-          <div className="p-4 border-t border-gray-100 dark:border-emerald-900/60 bg-gray-50/50 dark:bg-emerald-950/60 text-center">
+          <div className="p-4 pb-[max(1rem,env(safe-area-inset-bottom))] border-t border-gray-100 dark:border-emerald-900/60 bg-gray-50/50 dark:bg-emerald-950/60 text-center">
             <span className="text-xs text-gray-700 dark:text-gray-300">
               Disimpan di penyimpanan lokal browsermu
             </span>

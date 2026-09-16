@@ -149,26 +149,26 @@ function RecipeModalContent({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="recipe-modal-content relative w-full h-full sm:h-auto sm:max-h-[92vh] sm:max-w-3xl md:max-w-4xl bg-white dark:bg-emerald-950/95 sm:rounded-3xl border border-gray-200/80 dark:border-emerald-800/80 shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200"
+        className="recipe-modal-content relative w-full h-[100dvh] sm:h-auto sm:max-h-[92vh] sm:max-w-3xl md:max-w-4xl bg-white dark:bg-emerald-950/95 sm:rounded-3xl border-0 sm:border border-gray-200/80 dark:border-emerald-800/80 shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200"
       >
         {/* Top Floating Control Bar */}
-        <div className="absolute top-4 right-4 z-20 flex items-center gap-2 no-print">
+        <div className="absolute top-3 sm:top-4 right-3 sm:right-4 z-20 flex items-center gap-1.5 sm:gap-2 no-print">
           {/* Share Button */}
           <button
             type="button"
             onClick={handleShare}
-            className="p-2.5 rounded-full bg-white/90 dark:bg-emerald-900/90 text-gray-700 hover:text-emerald-700 dark:text-gray-200 dark:hover:text-emerald-300 backdrop-blur-md shadow-md border border-gray-200/50 dark:border-emerald-800/50 transition-all active:scale-90"
+            className="p-2 sm:p-2.5 rounded-full bg-white/90 dark:bg-emerald-900/90 text-gray-700 hover:text-emerald-700 dark:text-gray-200 dark:hover:text-emerald-300 backdrop-blur-md shadow-md border border-gray-200/50 dark:border-emerald-800/50 transition-all active:scale-90"
             title="Bagikan Resep"
             aria-label="Bagikan resep"
           >
             {copied ? <Check className="w-4 h-4 text-emerald-600" /> : <Share2 className="w-4 h-4" />}
           </button>
 
-          {/* Print Button */}
+          {/* Print Button (Desktop only) */}
           <button
             type="button"
             onClick={handlePrint}
-            className="p-2.5 rounded-full bg-white/90 dark:bg-emerald-900/90 text-gray-700 hover:text-emerald-700 dark:text-gray-200 dark:hover:text-emerald-300 backdrop-blur-md shadow-md border border-gray-200/50 dark:border-emerald-800/50 transition-all active:scale-90"
+            className="hidden sm:flex p-2.5 rounded-full bg-white/90 dark:bg-emerald-900/90 text-gray-700 hover:text-emerald-700 dark:text-gray-200 dark:hover:text-emerald-300 backdrop-blur-md shadow-md border border-gray-200/50 dark:border-emerald-800/50 transition-all active:scale-90"
             title="Cetak Resep"
             aria-label="Cetak resep"
           >
@@ -179,7 +179,7 @@ function RecipeModalContent({
           <button
             type="button"
             onClick={() => toggle(recipe)}
-            className={`p-2.5 rounded-full backdrop-blur-md shadow-md border transition-all active:scale-90 ${
+            className={`p-2 sm:p-2.5 rounded-full backdrop-blur-md shadow-md border transition-all active:scale-90 ${
               favorite
                 ? "bg-emerald-600 text-white border-emerald-500"
                 : "bg-white/90 dark:bg-emerald-900/90 text-gray-700 dark:text-gray-200 border-gray-200/50 dark:border-emerald-800/50 hover:text-emerald-600"
@@ -194,7 +194,7 @@ function RecipeModalContent({
           <button
             type="button"
             onClick={onClose}
-            className="p-2.5 rounded-full bg-black/60 hover:bg-black/80 text-white backdrop-blur-md shadow-md transition-all active:scale-90"
+            className="p-2 sm:p-2.5 rounded-full bg-black/60 hover:bg-black/80 text-white backdrop-blur-md shadow-md transition-all active:scale-90"
             title="Tutup (Esc)"
             aria-label="Tutup jendela"
           >
@@ -206,7 +206,7 @@ function RecipeModalContent({
         <div className="overflow-y-auto flex-grow divide-y divide-gray-100 dark:divide-emerald-900/30">
           {/* Header Image & Main Title */}
           <div className="relative">
-            <div className="relative h-64 sm:h-80 w-full bg-gray-100 dark:bg-emerald-950">
+            <div className="relative h-56 xs:h-64 sm:h-80 w-full bg-gray-100 dark:bg-emerald-950">
               <Image
                 src={imgSrc}
                 alt={recipe.title}
@@ -217,24 +217,24 @@ function RecipeModalContent({
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-black/20" />
 
-              <div className="absolute bottom-5 left-5 right-5 text-white">
-                <div className="flex flex-wrap items-center gap-2 mb-2">
-                  <span className="px-3 py-1 text-xs font-bold rounded-lg bg-emerald-600 text-white uppercase tracking-wider shadow-sm">
+              <div className="absolute bottom-4 sm:bottom-5 left-4 sm:left-5 right-4 sm:right-5 text-white">
+                <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
+                  <span className="px-2.5 py-0.5 sm:px-3 sm:py-1 text-[11px] sm:text-xs font-bold rounded-lg bg-emerald-600 text-white uppercase tracking-wider shadow-sm">
                     {recipe.category || "Umum"}
                   </span>
                   {recipe.region && (
-                    <span className="px-3 py-1 text-xs font-medium rounded-lg bg-black/40 backdrop-blur-md text-white border border-white/20">
+                    <span className="px-2.5 py-0.5 sm:px-3 sm:py-1 text-[11px] sm:text-xs font-medium rounded-lg bg-black/40 backdrop-blur-md text-white border border-white/20">
                       📍 {recipe.region}
                     </span>
                   )}
                   {recipe.saved > 0 && (
-                    <span className="px-2.5 py-0.5 text-xs font-medium rounded-lg bg-rose-600/80 backdrop-blur-md text-white flex items-center gap-1">
+                    <span className="px-2 py-0.5 sm:px-2.5 text-[11px] sm:text-xs font-medium rounded-lg bg-rose-600/80 backdrop-blur-md text-white flex items-center gap-1">
                       <Heart className="w-3 h-3 fill-current" /> {recipe.saved} disimpan
                     </span>
                   )}
                 </div>
 
-                <h1 id={titleId} className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white leading-tight drop-shadow-md">
+                <h1 id={titleId} className="text-xl xs:text-2xl sm:text-3xl font-extrabold tracking-tight text-white leading-tight drop-shadow-md">
                   {recipe.title}
                 </h1>
 
@@ -514,12 +514,12 @@ function RecipeModalContent({
         </div>
 
         {/* Footer Actions */}
-        <div className="p-4 sm:p-5 bg-gray-50 dark:bg-emerald-950 border-t border-gray-200/80 dark:border-emerald-900/60 flex items-center justify-between text-xs text-gray-700 dark:text-gray-300 no-print">
-          <span>ResepKu Nusantara · Sumber Cookpad ID</span>
+        <div className="p-3.5 sm:p-5 pb-[max(0.875rem,env(safe-area-inset-bottom))] bg-gray-50 dark:bg-emerald-950 border-t border-gray-200/80 dark:border-emerald-900/60 flex items-center justify-between text-xs text-gray-700 dark:text-gray-300 no-print">
+          <span className="truncate mr-2">ResepKu · Sumber Cookpad ID</span>
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 rounded-xl bg-gray-200 dark:bg-emerald-900/80 text-gray-800 dark:text-gray-200 font-semibold hover:bg-gray-300 dark:hover:bg-emerald-800 transition-colors"
+            className="px-4 py-2 rounded-xl bg-gray-200 dark:bg-emerald-900/80 text-gray-800 dark:text-gray-200 font-semibold hover:bg-gray-300 dark:hover:bg-emerald-800 transition-colors shrink-0"
           >
             Selesai Membaca
           </button>

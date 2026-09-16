@@ -48,10 +48,10 @@ export default function RecipeCard({ recipe, onSelect }: RecipeCardProps) {
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-black/10 opacity-70 group-hover:opacity-50 transition-opacity" />
 
         {/* Top Badges */}
-        <div className="absolute top-3 left-3 right-3 flex items-center justify-between">
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-lg bg-white/95 dark:bg-emerald-950/95 text-emerald-900 dark:text-emerald-200 backdrop-blur-md shadow-xs border border-white/20">
+        <div className="absolute top-2.5 sm:top-3 left-2.5 sm:left-3 right-2.5 sm:right-3 flex items-center justify-between">
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] sm:text-xs font-semibold rounded-lg bg-white/95 dark:bg-emerald-950/95 text-emerald-900 dark:text-emerald-200 backdrop-blur-md shadow-xs border border-white/20">
             <span>{meta.icon}</span>
-            <span>{recipe.category || "Umum"}</span>
+            <span className="truncate max-w-[140px]">{recipe.category || "Umum"}</span>
           </span>
 
           {/* Bookmark Button */}
@@ -66,7 +66,7 @@ export default function RecipeCard({ recipe, onSelect }: RecipeCardProps) {
             title={favorite ? "Hapus dari tersimpan" : "Simpan resep"}
             aria-label={favorite ? "Hapus dari tersimpan" : "Simpan resep"}
           >
-            <Bookmark className={`w-4 h-4 ${favorite ? "fill-current" : ""}`} />
+            <Bookmark className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${favorite ? "fill-current" : ""}`} />
           </button>
         </div>
 
@@ -81,9 +81,9 @@ export default function RecipeCard({ recipe, onSelect }: RecipeCardProps) {
       </div>
 
       {/* Card Content */}
-      <div className="p-4 sm:p-5 flex flex-col flex-grow justify-between gap-3">
+      <div className="p-3.5 sm:p-5 flex flex-col flex-grow justify-between gap-2.5 sm:gap-3">
         <div>
-          <h3 className="font-bold text-base sm:text-lg text-emerald-950 dark:text-emerald-50 line-clamp-1 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+          <h3 className="font-bold text-sm sm:text-base md:text-lg text-emerald-950 dark:text-emerald-50 line-clamp-2 min-h-[2.5rem] sm:min-h-[2.75rem] group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors leading-snug">
             {recipe.title}
           </h3>
 
@@ -93,49 +93,49 @@ export default function RecipeCard({ recipe, onSelect }: RecipeCardProps) {
             </p>
           ) : (
             <p className="mt-1 text-xs text-gray-700 dark:text-gray-300 italic">
-              Koleksi resep khas Indonesia teruji dari Cookpad.
+              Koleksi resep khas Nusantara teruji Cookpad.
             </p>
           )}
         </div>
 
         {/* Recipe Meta Info */}
-        <div className="pt-3 border-t border-gray-100 dark:border-emerald-900/30">
+        <div className="pt-2.5 sm:pt-3 border-t border-gray-100 dark:border-emerald-900/30">
           <div className="flex items-center justify-between text-xs text-gray-700 dark:text-gray-200">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2.5 sm:gap-3">
               {recipe.servings > 0 && (
                 <span className="flex items-center gap-1" title="Jumlah porsi">
-                  <Users className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                  <Users className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
                   <span>{recipe.servings} porsi</span>
                 </span>
               )}
 
               {ingredientsCount > 0 ? (
                 <span className="flex items-center gap-1" title="Jumlah bahan">
-                  <UtensilsCrossed className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                  <UtensilsCrossed className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
                   <span>{ingredientsCount} bahan</span>
                 </span>
               ) : (
                 <span className="text-[11px] text-emerald-700 dark:text-emerald-400 font-medium">
-                  Bahan & Takaran Lengkap
+                  Bahan Lengkap
                 </span>
               )}
             </div>
 
             {/* Author Credit or Saved count */}
             {recipe.saved > 0 ? (
-              <span className="flex items-center gap-1 text-[11px] text-amber-700 dark:text-amber-400 font-medium">
+              <span className="flex items-center gap-1 text-[11px] text-amber-700 dark:text-amber-400 font-medium shrink-0">
                 <Heart className="w-3 h-3 fill-current text-rose-500" />
                 <span>{recipe.saved}</span>
               </span>
             ) : recipe.author.name ? (
-              <span className="truncate max-w-[110px] text-[11px] text-gray-700 dark:text-gray-300">
+              <span className="truncate max-w-[100px] sm:max-w-[120px] text-[11px] text-gray-700 dark:text-gray-300">
                 Oleh {recipe.author.name}
               </span>
             ) : null}
           </div>
 
           {/* Bottom Action Trigger */}
-          <div className="mt-3 flex items-center justify-between text-xs font-semibold text-emerald-600 dark:text-emerald-400 group-hover:text-emerald-700 dark:group-hover:text-emerald-300">
+          <div className="mt-2.5 sm:mt-3 flex items-center justify-between text-xs font-semibold text-emerald-600 dark:text-emerald-400 group-hover:text-emerald-700 dark:group-hover:text-emerald-300">
             <span>{stepsCount > 0 ? `${stepsCount} Langkah Masak` : "Buka Panduan"}</span>
             <span className="flex items-center gap-1 text-xs group-hover:translate-x-1 transition-transform">
               Lihat Resep <ArrowRight className="w-3.5 h-3.5" />

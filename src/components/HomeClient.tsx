@@ -248,6 +248,7 @@ export default function HomeClient({
         selectedCategory={selectedCategory}
         onSelectCategory={(cat) => { handleSelectCategory(cat); scrollToRecipes(); }}
         isLoading={isLoading}
+        stats={stats}
       />
 
       <main ref={recipesSectionRef} className="flex-grow max-w-7xl mx-auto px-3.5 sm:px-6 lg:px-8 py-5 sm:py-6 pb-28 sm:pb-12 w-full">

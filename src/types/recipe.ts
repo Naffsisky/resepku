@@ -71,4 +71,20 @@ export interface ApiStats {
   totalDaerah: number;
   totalKategori: number;
   totalResep: number;
+  /** Per-category breakdown returned by /stats */
+  kategori?: Array<{ kategori: string; jumlah: number }>;
+}
+
+/** Pagination metadata returned by paginated endpoints */
+export interface PaginationMeta {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
+/** Paginated result for recipe lists */
+export interface PagedRecipes {
+  recipes: ParsedRecipe[];
+  meta: PaginationMeta;
 }

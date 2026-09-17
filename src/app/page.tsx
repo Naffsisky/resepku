@@ -1,19 +1,19 @@
-import { getAllRecipes, getCategories, getApiStats } from "@/lib/api";
+import { getAllRecipesPaged, getCategories, getApiStats } from "@/lib/api";
 import HomeClient from "@/components/HomeClient";
 
-// Revalidate every 60 seconds so stats & recipe counts stay fresh
 export const revalidate = 60;
 
 export default async function HomePage() {
-  const [initialRecipes, initialCategories, initialStats] = await Promise.all([
-    getAllRecipes(),
+  const [initialPaged, initialCategories, initialStats] = await Promise.all([
+    getAllRecipesPaged(1, 24, "created_at", "desc"),
     getCategories(),
     getApiStats(),
   ]);
 
   return (
     <HomeClient
-      initialRecipes={initialRecipes}
+      initialRecipes={initialPaged.recipes}
+      initialMeta={initialPaged.meta}
       initialCategories={initialCategories}
       initialStats={initialStats}
     />

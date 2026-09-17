@@ -89,6 +89,66 @@ export async function filterByCategory(category: string): Promise<ParsedRecipe[]
   return data.meals.map(parseRecipe);
 }
 
+// Canonical category list used as fallback when API doesn't respond
+const CANONICAL_CATEGORIES = [
+  "Ayam",
+  "Daging Sapi",
+  "Kambing",
+  "Ikan & Seafood",
+  "Sayur & Vegetarian",
+  "Nasi & Bubur",
+  "Mie & Pasta",
+  "Sup & Soto",
+  "Kue & Dessert",
+  "Minuman",
+  "Sambal & Bumbu",
+  "Snack & Gorengan",
+  "Lainnya",
+];
+
+/**
+ * Fetch all recipes by fetching every category in parallel, then deduplicating.
+ * Because the API caps each category at 50 results, this yields up to ~650 summary recipes.
+ * The results are ordered by category so pagination is coherent.
+ */
+export async function getAllRecipes(): Promise<ParsedRecipe[]> {
+  // Fetch category list dynamically so it stays in sync with the DB
+  const catData = await fetchFromApi<{
+    categories?: Array<{ strKategori: string }>;
+  }>("/categories.php");
+
+  const categoryNames =
+    catData?.categories
+      ?.map((c) => c.strKategori?.trim())
+      .filter((n): n is string => Boolean(n && n.length > 0)) ??
+    CANONICAL_CATEGORIES;
+
+  // Fetch all categories in parallel
+  const results = await Promise.allSettled(
+    categoryNames.map((cat) =>
+      fetchFromApi<{ meals: RawRecipe[] | null }>(
+        `/filter.php?c=${encodeURIComponent(cat)}`
+      )
+    )
+  );
+
+  const seen = new Set<string>();
+  const combined: ParsedRecipe[] = [];
+
+  results.forEach((result) => {
+    if (result.status === "fulfilled" && result.value?.meals) {
+      result.value.meals.forEach((raw) => {
+        if (!seen.has(raw.idMakanan)) {
+          seen.add(raw.idMakanan);
+          combined.push(parseRecipe(raw));
+        }
+      });
+    }
+  });
+
+  return combined;
+}
+
 export async function filterByIngredient(ingredient: string): Promise<ParsedRecipe[]> {
   if (!ingredient.trim()) return [];
   const data = await fetchFromApi<{ meals: RawRecipe[] | null }>(

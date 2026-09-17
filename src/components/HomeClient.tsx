@@ -1,13 +1,23 @@
 "use client";
 
-import { useState, useCallback, useMemo, useRef } from "react";
-import { Search, RefreshCw, AlertCircle, ArrowUpDown, ChevronDown, Sparkles } from "lucide-react";
+import { useState, useCallback, useMemo, useEffect, useRef } from "react";
+import {
+  Search,
+  RefreshCw,
+  AlertCircle,
+  ArrowUpDown,
+  Sparkles,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import { ParsedRecipe, ApiStats } from "@/types/recipe";
 import {
   searchRecipes,
   filterByCategory,
   filterByIngredient,
-  getLatestRecipes,
+  getAllRecipes,
+  getApiStats,
+  getCategories,
 } from "@/lib/api";
 import { getCategoryMeta } from "@/lib/category-meta";
 import Navbar from "@/components/Navbar";
@@ -29,7 +39,32 @@ interface HomeClientProps {
 
 type SortOption = "default" | "az" | "za" | "servings-desc" | "ingredients-asc";
 
-const PAGE_SIZE = 12;
+const PAGE_SIZE = 24;
+
+/** Clamp a page number into [1, max] */
+function clampPage(page: number, max: number) {
+  return Math.min(Math.max(1, page), Math.max(1, max));
+}
+
+/** Generate page-number range with ellipsis — always show first, last, ±2 of current */
+function buildPageRange(current: number, total: number): (number | "…")[] {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+  const pages: (number | "…")[] = [];
+  const addNum = (n: number) => {
+    if (pages[pages.length - 1] !== n) pages.push(n);
+  };
+  const addDots = () => {
+    if (pages[pages.length - 1] !== "…") pages.push("…");
+  };
+  addNum(1);
+  if (current > 3) addDots();
+  for (let i = Math.max(2, current - 2); i <= Math.min(total - 1, current + 2); i++) {
+    addNum(i);
+  }
+  if (current < total - 2) addDots();
+  addNum(total);
+  return pages;
+}
 
 export default function HomeClient({
   initialRecipes,
@@ -37,13 +72,13 @@ export default function HomeClient({
   initialStats,
 }: HomeClientProps) {
   const [recipes, setRecipes] = useState<ParsedRecipe[]>(initialRecipes);
-  const [categories] = useState<string[]>(initialCategories);
-  const [stats] = useState<ApiStats | null>(initialStats);
+  const [categories, setCategories] = useState<string[]>(initialCategories);
+  const [stats, setStats] = useState<ApiStats | null>(initialStats);
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [searchMode, setSearchMode] = useState<"recipe" | "ingredient">("recipe");
   const [sortBy, setSortBy] = useState<SortOption>("default");
-  const [visibleCount, setVisibleCount] = useState<number>(PAGE_SIZE);
+  const [page, setPage] = useState<number>(1);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -54,75 +89,93 @@ export default function HomeClient({
 
   const recipesSectionRef = useRef<HTMLDivElement>(null);
 
-  // Load recipes for search
-  const handleSearch = useCallback(async (query: string, mode: "recipe" | "ingredient" = "recipe") => {
-    setSearchQuery(query);
-    setSearchMode(mode);
-    setSelectedCategory("");
-    setError(null);
-    setVisibleCount(PAGE_SIZE);
+  // Refresh stats & categories from API client-side on mount (so they stay live)
+  useEffect(() => {
+    getApiStats().then((s) => {
+      if (s) setStats(s);
+    });
+    getCategories().then((cats) => {
+      if (cats.length > 0) setCategories(cats);
+    });
+  }, []);
 
-    if (!query.trim()) {
+  // Reset page whenever recipes list changes
+  const resetPage = useCallback(() => setPage(1), []);
+
+  // --- Handlers ---
+
+  const handleSearch = useCallback(
+    async (query: string, mode: "recipe" | "ingredient" = "recipe") => {
+      setSearchQuery(query);
+      setSearchMode(mode);
+      setSelectedCategory("");
+      setError(null);
+      resetPage();
+
+      if (!query.trim()) {
+        setIsLoading(true);
+        try {
+          const data = await getAllRecipes();
+          setRecipes(data);
+        } catch {
+          setError("Gagal memuat semua resep.");
+        } finally {
+          setIsLoading(false);
+        }
+        return;
+      }
+
       setIsLoading(true);
       try {
-        const data = await getLatestRecipes();
-        setRecipes(data);
+        let results: ParsedRecipe[];
+        if (mode === "ingredient") {
+          results = await filterByIngredient(query.trim());
+        } else {
+          results = await searchRecipes(query.trim());
+        }
+        setRecipes(results);
       } catch {
-        setError("Gagal memuat resep terbaru.");
+        setError("Terjadi kesalahan saat mencari resep.");
       } finally {
         setIsLoading(false);
       }
-      return;
-    }
+    },
+    [resetPage]
+  );
 
-    setIsLoading(true);
-    try {
-      let results: ParsedRecipe[];
-      if (mode === "ingredient") {
-        results = await filterByIngredient(query.trim());
-      } else {
-        results = await searchRecipes(query.trim());
+  const handleSelectCategory = useCallback(
+    async (cat: string) => {
+      setSelectedCategory(cat);
+      setSearchQuery("");
+      setError(null);
+      resetPage();
+      setIsLoading(true);
+
+      try {
+        if (!cat) {
+          const data = await getAllRecipes();
+          setRecipes(data);
+        } else {
+          const data = await filterByCategory(cat);
+          setRecipes(data);
+        }
+      } catch {
+        setError("Gagal memfilter resep berdasarkan kategori.");
+      } finally {
+        setIsLoading(false);
       }
-      setRecipes(results);
-    } catch {
-      setError("Terjadi kesalahan saat mencari resep.");
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+    },
+    [resetPage]
+  );
 
-  // Category selection
-  const handleSelectCategory = useCallback(async (cat: string) => {
-    setSelectedCategory(cat);
-    setSearchQuery("");
-    setError(null);
-    setVisibleCount(PAGE_SIZE);
-    setIsLoading(true);
-
-    try {
-      if (!cat) {
-        const data = await getLatestRecipes();
-        setRecipes(data);
-      } else {
-        const data = await filterByCategory(cat);
-        setRecipes(data);
-      }
-    } catch {
-      setError("Gagal memfilter resep berdasarkan kategori.");
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  // Reset to default latest
   const handleReset = async () => {
     setSearchQuery("");
     setSelectedCategory("");
     setError(null);
-    setVisibleCount(PAGE_SIZE);
+    resetPage();
     setIsLoading(true);
     try {
-      const data = await getLatestRecipes();
+      const data = await getAllRecipes();
       setRecipes(data);
     } finally {
       setIsLoading(false);
@@ -137,7 +190,8 @@ export default function HomeClient({
     recipesSectionRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  // Sorting logic
+  // --- Sorting & Pagination ---
+
   const sortedRecipes = useMemo(() => {
     const list = [...recipes];
     switch (sortBy) {
@@ -154,9 +208,21 @@ export default function HomeClient({
     }
   }, [recipes, sortBy]);
 
+  const totalPages = Math.max(1, Math.ceil(sortedRecipes.length / PAGE_SIZE));
+  const currentPage = clampPage(page, totalPages);
+
   const displayedRecipes = useMemo(() => {
-    return sortedRecipes.slice(0, visibleCount);
-  }, [sortedRecipes, visibleCount]);
+    const start = (currentPage - 1) * PAGE_SIZE;
+    return sortedRecipes.slice(start, start + PAGE_SIZE);
+  }, [sortedRecipes, currentPage]);
+
+  const pageRange = useMemo(() => buildPageRange(currentPage, totalPages), [currentPage, totalPages]);
+
+  const goToPage = (p: number) => {
+    const clamped = clampPage(p, totalPages);
+    setPage(clamped);
+    scrollToRecipes();
+  };
 
   const activeCategoryMeta = selectedCategory ? getCategoryMeta(selectedCategory) : null;
 
@@ -204,7 +270,7 @@ export default function HomeClient({
                   ? `Hasil ${searchMode === "ingredient" ? "Bahan" : "Pencarian"}: "${searchQuery}"`
                   : selectedCategory
                   ? `Kategori: ${selectedCategory}`
-                  : "Resep Pilihan & Terbaru"}
+                  : "Semua Resep"}
               </h2>
             </div>
 
@@ -213,8 +279,23 @@ export default function HomeClient({
                 "Memuat resep lezat..."
               ) : (
                 <>
-                  Ditemukan <strong className="text-emerald-700 dark:text-emerald-400 font-bold">{recipes.length}</strong> resep masakan
-                  {recipes.length > visibleCount && ` (menampilkan ${displayedRecipes.length})`}
+                  Ditemukan{" "}
+                  <strong className="text-emerald-700 dark:text-emerald-400 font-bold">
+                    {recipes.length.toLocaleString("id-ID")}
+                  </strong>{" "}
+                  resep
+                  {totalPages > 1 && (
+                    <>
+                      {" "}· Halaman{" "}
+                      <strong className="text-emerald-700 dark:text-emerald-400">
+                        {currentPage}
+                      </strong>{" "}
+                      dari{" "}
+                      <strong className="text-emerald-700 dark:text-emerald-400">
+                        {totalPages.toLocaleString("id-ID")}
+                      </strong>
+                    </>
+                  )}
                 </>
               )}
             </p>
@@ -233,7 +314,10 @@ export default function HomeClient({
                 <select
                   id="sort-select"
                   value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as SortOption)}
+                  onChange={(e) => {
+                    setSortBy(e.target.value as SortOption);
+                    resetPage();
+                  }}
                   className="bg-transparent focus:outline-none cursor-pointer pr-4 font-semibold text-emerald-900 dark:text-emerald-200"
                 >
                   <option value="default" className="dark:bg-emerald-950">Paling Sesuai</option>
@@ -324,18 +408,71 @@ export default function HomeClient({
               ))}
             </div>
 
-            {/* Load More Button if results exceed initial page */}
-            {recipes.length > visibleCount && (
-              <div className="mt-10 text-center">
+            {/* Numbered Pagination */}
+            {totalPages > 1 && (
+              <nav
+                aria-label="Navigasi halaman resep"
+                className="mt-10 flex items-center justify-center gap-1 sm:gap-1.5 flex-wrap"
+              >
+                {/* Prev */}
                 <button
                   type="button"
-                  onClick={() => setVisibleCount((prev) => prev + PAGE_SIZE)}
-                  className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-white dark:bg-emerald-950/60 hover:bg-emerald-50 dark:hover:bg-emerald-900/60 text-emerald-800 dark:text-emerald-200 font-semibold text-xs sm:text-sm border border-emerald-300/80 dark:border-emerald-800 shadow-sm active:scale-95 transition-all"
+                  onClick={() => goToPage(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  aria-label="Halaman sebelumnya"
+                  className="flex items-center gap-1 px-2.5 sm:px-3 py-2 rounded-xl text-xs font-semibold border border-gray-200 dark:border-emerald-800 bg-white dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-200 hover:bg-emerald-50 dark:hover:bg-emerald-900/50 disabled:opacity-40 disabled:cursor-not-allowed transition-all active:scale-95 shadow-2xs"
                 >
-                  <span>Tampilkan Lebih Banyak ({recipes.length - visibleCount} resep lagi)</span>
-                  <ChevronDown className="w-4 h-4" />
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Prev</span>
                 </button>
-              </div>
+
+                {/* Page Numbers */}
+                {pageRange.map((item, idx) =>
+                  item === "…" ? (
+                    <span
+                      key={`ellipsis-${idx}`}
+                      className="px-1.5 text-gray-400 dark:text-gray-600 text-xs select-none"
+                    >
+                      …
+                    </span>
+                  ) : (
+                    <button
+                      key={item}
+                      type="button"
+                      onClick={() => goToPage(item)}
+                      aria-current={item === currentPage ? "page" : undefined}
+                      className={`min-w-[2.25rem] h-9 px-2 rounded-xl text-xs font-semibold border transition-all active:scale-95 shadow-2xs ${
+                        item === currentPage
+                          ? "bg-emerald-600 border-emerald-600 text-white shadow-emerald-600/20"
+                          : "bg-white dark:bg-emerald-950/60 border-gray-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 hover:bg-emerald-50 dark:hover:bg-emerald-900/50"
+                      }`}
+                    >
+                      {item}
+                    </button>
+                  )
+                )}
+
+                {/* Next */}
+                <button
+                  type="button"
+                  onClick={() => goToPage(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  aria-label="Halaman berikutnya"
+                  className="flex items-center gap-1 px-2.5 sm:px-3 py-2 rounded-xl text-xs font-semibold border border-gray-200 dark:border-emerald-800 bg-white dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-200 hover:bg-emerald-50 dark:hover:bg-emerald-900/50 disabled:opacity-40 disabled:cursor-not-allowed transition-all active:scale-95 shadow-2xs"
+                >
+                  <span className="hidden sm:inline">Next</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              </nav>
+            )}
+
+            {/* Page info below pagination */}
+            {totalPages > 1 && (
+              <p className="mt-3 text-center text-[11px] text-gray-500 dark:text-gray-400">
+                Menampilkan {(currentPage - 1) * PAGE_SIZE + 1}–
+                {Math.min(currentPage * PAGE_SIZE, recipes.length)} dari{" "}
+                {recipes.length.toLocaleString("id-ID")} resep
+              </p>
             )}
           </>
         )}

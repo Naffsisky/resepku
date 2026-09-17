@@ -67,7 +67,10 @@ export default function HeroBanner({
         {/* Top badge */}
         <div className="inline-flex items-center gap-1.5 sm:gap-2 px-3 py-1 sm:px-3.5 sm:py-1.5 rounded-full bg-emerald-100/80 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 text-[11px] sm:text-xs font-semibold mb-3.5 sm:mb-5 shadow-xs border border-emerald-200/50 dark:border-emerald-800/50">
           <ChefHat className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-          <span>8.700+ Resep Masakan Nusantara Cookpad</span>
+          <span>
+            {stats ? `${formatNumber(stats.totalResep)}+ Resep Masakan Nusantara` : "Ribuan Resep Masakan Nusantara"}{" "}
+            Cookpad
+          </span>
         </div>
 
         {/* Hero Title */}
